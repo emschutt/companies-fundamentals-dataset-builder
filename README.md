@@ -1,8 +1,6 @@
 # Companies Fundamentals Dataset Builder
 
-Build a clean public-company fundamentals dataset from open or low-cost sources, align it across vendors, and produce a safer point-in-time panel for research and modeling.
-
-![Pipeline overview](docs/images/pipeline-overview.svg)
+Build an aligned public-company fundamentals dataset from open or low-cost sources and generate a conservative point-in-time panel for research workflows.
 
 ## Why this repo exists
 
@@ -15,13 +13,11 @@ The main problems are usually:
 - handling ticker changes and index membership
 - avoiding accidental timing leakage
 
-This repo packages a practical pipeline around two especially useful sources:
+This repo packages a practical pipeline around:
 
 - DoltHub `post-no-preference/earnings`
 - DoltHub `post-no-preference/stocks`
 - optional Defeat Beta ratios for extra market and fundamental features
-
-It also includes paid-data extensions for Sharadar and a smaller fallback path for Financial Modeling Prep.
 
 ## What the pipeline does
 
@@ -47,8 +43,6 @@ For the open DoltHub statements, true filing timestamps are not available in the
 
 That gives you something much safer than treating fiscal period dates as if they were publication dates.
 
-![PIT timing logic](docs/images/pit-timing.svg)
-
 ## Repository structure
 
 ```text
@@ -62,10 +56,8 @@ That gives you something much safer than treating fiscal period dates as if they
 │   ├── enrich_dolthub_sp500_prices.py
 │   ├── build_pit_sp500_panel.py
 │   ├── audit_sp500_leakage.py
-│   ├── build_sharadar_dataset.py
 │   └── build_fmp_dataset.py
-├── DOLTHUB_SP500_DATASET.md
-└── SHARADAR_DATASET.md
+└── DOLTHUB_SP500_DATASET.md
 ```
 
 ## Main scripts
@@ -80,6 +72,8 @@ That gives you something much safer than treating fiscal period dates as if they
   Builds the conservative point-in-time modeling panel.
 - [scripts/audit_sp500_leakage.py](scripts/audit_sp500_leakage.py)
   Audits raw and final outputs for timing leakage.
+- [scripts/build_fmp_dataset.py](scripts/build_fmp_dataset.py)
+  Fallback path for smaller per-symbol dataset builds when the main open-data route is not enough.
 
 ## Install
 
@@ -213,12 +207,11 @@ The most important outputs are:
 - Yahoo Finance for OHLCV enrichment
 - Defeat Beta for optional ratio-style features
 
-### Paid or semi-paid extensions
+### Fallback extension
 
-- [scripts/build_sharadar_dataset.py](scripts/build_sharadar_dataset.py)
 - [scripts/build_fmp_dataset.py](scripts/build_fmp_dataset.py)
 
-Sharadar is the cleaner option when you want a more production-grade bulk dataset. FMP is included as a fallback path for smaller symbol lists or narrower experiments.
+FMP is included as a fallback path for smaller symbol lists or narrower experiments.
 
 ## What to expect
 
@@ -239,7 +232,6 @@ Practical limitations:
 ## Related notes
 
 - [DOLTHUB_SP500_DATASET.md](DOLTHUB_SP500_DATASET.md)
-- [SHARADAR_DATASET.md](SHARADAR_DATASET.md)
 
 ## License
 
