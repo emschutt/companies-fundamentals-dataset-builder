@@ -1,57 +1,87 @@
-# Open Company Fundamentals Pipeline
+# Companies Fundamentals Dataset Builder
 
-This repo builds a research dataset for public-company fundamentals using open or low-cost sources.
+Build a clean public-company fundamentals dataset from open or low-cost sources, align it across vendors, and produce a safer point-in-time panel for research and modeling.
 
-The main goal is simple:
+![Pipeline overview](docs/images/pipeline-overview.svg)
 
-1. Download company fundamentals and analyst-style data from public sources.
-2. Align everything by ticker and date.
-3. Build a point-in-time-safe panel for modeling.
-4. Keep the leakage assumptions explicit.
+## Why this repo exists
 
-This repo is built around two sources mentioned in the thread:
+Building a usable fundamentals dataset is often harder than the modeling itself.
 
-- DoltHub `post-no-preference/earnings` and `post-no-preference/stocks`
-- Defeat Beta for extra ratio-style features
+The main problems are usually:
 
-The core point-in-time logic is:
+- finding sources with enough statement and estimate coverage
+- aligning inconsistent schemas across providers
+- handling ticker changes and index membership
+- avoiding accidental timing leakage
 
-- Use the earnings calendar when a direct future event date is available.
-- Use conservative availability lags when filing timestamps are not available.
-- Quarterly statement data becomes available after `45` days.
-- Annual statement data becomes available after `90` days.
+This repo packages a practical pipeline around two especially useful sources:
 
-## What You Get
+- DoltHub `post-no-preference/earnings`
+- DoltHub `post-no-preference/stocks`
+- optional Defeat Beta ratios for extra market and fundamental features
 
-The pipeline produces two main outputs:
+It also includes paid-data extensions for Sharadar and a smaller fallback path for Financial Modeling Prep.
 
-- `data/dolthub_sp500/fundamentals_estimates_prices_panel.parquet`
-  This is the broad aligned panel. It is useful for exploration, feature checks, and coverage work.
-- `data/dolthub_sp500/fundamentals_estimates_prices_panel_pit.parquet`
-  This is the safer modeling panel. It applies conservative point-in-time rules and drops known risky fields.
+## What the pipeline does
 
-It also writes manifests so you can inspect what was downloaded and what was built:
+1. Downloads open fundamentals, analyst-style estimates, prices, and S&P 500 membership history.
+2. Filters the universe with historical membership intervals to reduce survivorship bias.
+3. Aligns fundamentals, estimates, and market data by ticker and date.
+4. Builds a conservative point-in-time panel.
+5. Audits the final panel for leakage risk.
 
-- `data/dolthub_sp500/manifest.json`
-- `data/dolthub_sp500/price_enrichment_manifest.json`
-- `data/dolthub_sp500/pit_panel_manifest.json`
+## Point-in-time logic
 
-## Repo Layout
+The key idea in this repo is simple:
 
-- [scripts/build_dolthub_sp500_dataset.py](/Users/ems/Documents/ETFs/scripts/build_dolthub_sp500_dataset.py)
-  Downloads and aligns open S&P 500 fundamentals, estimates, prices, and membership intervals from DoltHub.
-- [scripts/enrich_dolthub_sp500_prices.py](/Users/ems/Documents/ETFs/scripts/enrich_dolthub_sp500_prices.py)
+- use direct event timing when a trustworthy date is available
+- otherwise use conservative lag assumptions
+
+For the open DoltHub statements, true filing timestamps are not available in the source tables used here. So the safer panel assumes:
+
+- quarterly statement data becomes usable after `45` days
+- annual statement data becomes usable after `90` days
+- EPS history is delayed by the quarter lag
+- estimate rows are kept only while their target period end is still in the future
+
+That gives you something much safer than treating fiscal period dates as if they were publication dates.
+
+![PIT timing logic](docs/images/pit-timing.svg)
+
+## Repository structure
+
+```text
+.
+├── README.md
+├── requirements.txt
+├── requirements-optional.txt
+├── scripts/
+│   ├── run_open_fundamentals_pipeline.py
+│   ├── build_dolthub_sp500_dataset.py
+│   ├── enrich_dolthub_sp500_prices.py
+│   ├── build_pit_sp500_panel.py
+│   ├── audit_sp500_leakage.py
+│   ├── build_sharadar_dataset.py
+│   └── build_fmp_dataset.py
+├── DOLTHUB_SP500_DATASET.md
+└── SHARADAR_DATASET.md
+```
+
+## Main scripts
+
+- [scripts/run_open_fundamentals_pipeline.py](scripts/run_open_fundamentals_pipeline.py)
+  Runs the open-data pipeline in the intended order.
+- [scripts/build_dolthub_sp500_dataset.py](scripts/build_dolthub_sp500_dataset.py)
+  Downloads and aligns the base open dataset.
+- [scripts/enrich_dolthub_sp500_prices.py](scripts/enrich_dolthub_sp500_prices.py)
   Adds Yahoo Finance OHLCV and optional Defeat Beta features.
-- [scripts/build_pit_sp500_panel.py](/Users/ems/Documents/ETFs/scripts/build_pit_sp500_panel.py)
-  Builds the conservative point-in-time panel.
-- [scripts/audit_sp500_leakage.py](/Users/ems/Documents/ETFs/scripts/audit_sp500_leakage.py)
-  Audits leakage risk in the raw or PIT panels.
-- [scripts/run_open_fundamentals_pipeline.py](/Users/ems/Documents/ETFs/scripts/run_open_fundamentals_pipeline.py)
-  Convenience entrypoint that runs the full open-data pipeline in order.
+- [scripts/build_pit_sp500_panel.py](scripts/build_pit_sp500_panel.py)
+  Builds the conservative point-in-time modeling panel.
+- [scripts/audit_sp500_leakage.py](scripts/audit_sp500_leakage.py)
+  Audits raw and final outputs for timing leakage.
 
 ## Install
-
-Create a virtual environment, then install the core dependencies:
 
 ```bash
 python3 -m venv .venv
@@ -59,29 +89,46 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-If you also want the optional Defeat Beta layer:
+Optional layer:
 
 ```bash
 pip install -r requirements-optional.txt
 ```
 
-## Quick Start
+Core dependencies:
 
-Run the full open-data pipeline:
+- `pandas`
+- `pyarrow`
+- `requests`
+- `yfinance`
 
-```bash
-python3 scripts/run_open_fundamentals_pipeline.py --years 10 --include-defeatbeta
-```
+Optional dependency:
 
-If you only want the safer point-in-time panel without the optional Defeat Beta layer:
+- `defeatbeta-api`
+
+## Quick start
+
+Run the full open-data build:
 
 ```bash
 python3 scripts/run_open_fundamentals_pipeline.py --years 10
 ```
 
-## Step By Step
+Run the same build with optional Defeat Beta features:
 
-### 1. Build the open base dataset from DoltHub
+```bash
+python3 scripts/run_open_fundamentals_pipeline.py --years 10 --include-defeatbeta
+```
+
+Skip the final audit if you only want the dataset artifacts:
+
+```bash
+python3 scripts/run_open_fundamentals_pipeline.py --years 10 --skip-audit
+```
+
+## Step-by-step usage
+
+### 1. Build the open base dataset
 
 ```bash
 python3 scripts/build_dolthub_sp500_dataset.py --years 10 --skip-existing
@@ -92,43 +139,48 @@ This writes:
 - historical S&P 500 membership intervals
 - local Parquet copies of the source tables
 - `fundamentals_estimates_panel.parquet`
-- `aligned_sp500_daily_panel.parquet` when price tables are included
+- `aligned_sp500_daily_panel.parquet`
+- `manifest.json`
 
 ### 2. Add market data and optional Defeat Beta features
 
 ```bash
-python3 scripts/enrich_dolthub_sp500_prices.py --data-dir data/dolthub_sp500 --years 10 --skip-existing
+python3 scripts/enrich_dolthub_sp500_prices.py \
+  --data-dir data/dolthub_sp500 \
+  --years 10 \
+  --skip-existing
 ```
 
 Optional Defeat Beta:
 
 ```bash
-python3 scripts/enrich_dolthub_sp500_prices.py --data-dir data/dolthub_sp500 --years 10 --skip-existing --include-defeatbeta
+python3 scripts/enrich_dolthub_sp500_prices.py \
+  --data-dir data/dolthub_sp500 \
+  --years 10 \
+  --skip-existing \
+  --include-defeatbeta
 ```
 
 This step adds:
 
 - Yahoo Finance OHLCV
-- trailing return features
-- rolling volume and volatility features
-- optional Defeat Beta ratios
-- forward return columns in the broad panel for research only
+- trailing returns
+- rolling volume and volatility
+- forward return targets for research use
+- optional Defeat Beta features
 
-### 3. Build the conservative point-in-time panel
+### 3. Build the conservative PIT panel
 
 ```bash
 python3 scripts/build_pit_sp500_panel.py --data-dir data/dolthub_sp500
 ```
 
-This step:
+This writes:
 
-- applies `45`-day lag rules to quarterly statement rows
-- applies `90`-day lag rules to annual statement rows
-- keeps estimate rows only when the target period end is still in the future
-- joins EPS history only after the quarter lag
-- removes known risky columns such as forward targets and Defeat Beta fields
+- `data/dolthub_sp500/fundamentals_estimates_prices_panel_pit.parquet`
+- `data/dolthub_sp500/pit_panel_manifest.json`
 
-### 4. Audit leakage risk
+### 4. Audit for leakage
 
 ```bash
 python3 scripts/audit_sp500_leakage.py \
@@ -136,44 +188,59 @@ python3 scripts/audit_sp500_leakage.py \
   --out-dir outputs/leakage_audit_sp500_pit
 ```
 
-## Data Logic
+## Output files
 
-The most important detail in this repo is timing discipline.
+The most important outputs are:
 
-The raw DoltHub statements expose fiscal period dates, but they do not provide full filing or accepted timestamps. That means a direct join on statement date is too optimistic for a real backtest.
+- `data/dolthub_sp500/fundamentals_estimates_prices_panel.parquet`
+  Broad aligned panel for exploration and feature work.
+- `data/dolthub_sp500/fundamentals_estimates_prices_panel_pit.parquet`
+  Safer panel for modeling and backtests.
+- `data/dolthub_sp500/manifest.json`
+  Build metadata for the base dataset.
+- `data/dolthub_sp500/price_enrichment_manifest.json`
+  Coverage and error metadata for Yahoo Finance and Defeat Beta enrichment.
+- `data/dolthub_sp500/pit_panel_manifest.json`
+  Metadata for the PIT output.
 
-To avoid that, the PIT builder uses a conservative rule:
+## Data sources
 
-- quarterly data is usable `45` days after the fiscal period end
-- annual data is usable `90` days after the fiscal period end
+### Open-data path
 
-For estimates:
+- DoltHub `post-no-preference/earnings`
+- DoltHub `post-no-preference/stocks`
+- historical S&P 500 membership from `fja05680/sp500`
+- Yahoo Finance for OHLCV enrichment
+- Defeat Beta for optional ratio-style features
 
-- estimate rows are kept only while their target period end is still ahead of the observation date
-- earnings calendar fields can be used as event timing anchors when available
+### Paid or semi-paid extensions
 
-This is not the same as having true filing timestamps, but it is much safer than treating fiscal period dates as if they were release dates.
+- [scripts/build_sharadar_dataset.py](scripts/build_sharadar_dataset.py)
+- [scripts/build_fmp_dataset.py](scripts/build_fmp_dataset.py)
 
-## What To Expect
+Sharadar is the cleaner option when you want a more production-grade bulk dataset. FMP is included as a fallback path for smaller symbol lists or narrower experiments.
 
-Expected behavior:
+## What to expect
 
-- the build can take time because several tables are downloaded and filtered locally
-- some historical tickers will have incomplete Yahoo Finance coverage
-- some optional Defeat Beta methods may fail for individual tickers
-- all of those gaps should appear in the manifest files instead of failing silently
+This repo is useful for:
 
-Expected output quality:
+- factor research
+- ranking models
+- leakage-aware backtests
+- building a public baseline before moving to premium vendors
 
-- good enough for exploratory factor research
-- much safer for backtests once you switch to the PIT panel
-- still not a perfect replacement for a premium vendor with real filing timestamps
+Practical limitations:
 
-## Optional Paid Data Paths
+- some delisted or renamed tickers will have incomplete Yahoo Finance coverage
+- some Defeat Beta methods may fail for individual symbols
+- the open-data path still relies on conservative lags instead of true filing timestamps
+- this is safer than a naive join, but still not the same as a premium point-in-time vendor
 
-There are also scripts for paid or semi-paid alternatives:
+## Related notes
 
-- [scripts/build_sharadar_dataset.py](/Users/ems/Documents/ETFs/scripts/build_sharadar_dataset.py)
-- [scripts/build_fmp_dataset.py](/Users/ems/Documents/ETFs/scripts/build_fmp_dataset.py)
+- [DOLTHUB_SP500_DATASET.md](DOLTHUB_SP500_DATASET.md)
+- [SHARADAR_DATASET.md](SHARADAR_DATASET.md)
 
-Sharadar is the cleaner route when you have access to a proper bulk fundamentals feed. FMP is currently included as a fallback for smaller symbol lists.
+## License
+
+No license file has been added yet. If you plan to make the repo broadly reusable, adding a license should be one of the next steps.
