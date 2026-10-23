@@ -1,5 +1,7 @@
 data/
 .env
+.env.*
+!.env.example
 .DS_Store
 __pycache__/
 *.pyc
@@ -8,3 +10,8 @@ __pycache__/
 outputs/
 output/
 tmp/
+*.parquet
+*.arrow
+*.feather
+docs/STOCKFIT_ASSESSMENT_*.md
+docs/STOCKFIT_COVERAGE_*.md

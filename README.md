@@ -87,8 +87,10 @@ uses the existing research dates and membership intervals; the filing dataset
 can extend beyond them. Calculated values without sufficient dated provenance
 are retained for snapshot use and are not backdated into historical features.
 
-See [StockFit methodology and usage](docs/STOCKFIT.md) and the
-[2026-10-23 assessment](docs/STOCKFIT_ASSESSMENT_2026-10-23.md).
+See [StockFit methodology and usage](docs/STOCKFIT.md). Downloaded data,
+assessment results, coverage reports and corrected/enriched datasets are private
+local artifacts and are not published in this repository. The optional adapter
+is code only; users supply their own authorized API access.
 
 ## Full-universe StockFit dataset
 
