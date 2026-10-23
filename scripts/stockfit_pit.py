@@ -66,9 +66,15 @@ def normalize_period(period, envelope, cik=None):
         units = {e[3].get("unit") for e in events + undated} - {None}
         unit = next(iter(units)) if len(units) == 1 else None
         fx = period.get("fx") or {}
-        value_unit = native.get(metric, unit)
-        if fx and metric not in native and unit and unit not in ("shares", "pure"):
-            value_unit = "USD/shares" if unit.endswith("/shares") else "USD"
+        native_passthrough = (params.get("currency") == "original" and
+                              fx.get("targetCurrency") == "original" and not fx.get("rates"))
+        native_currency = native.get(metric)
+        value_unit = unit
+        if native_currency:
+            value_unit = native_currency + ("/shares" if unit and unit.endswith("/shares") else "")
+        elif fx and not native_passthrough and unit and unit not in ("shares", "pure"):
+            target = fx.get("targetCurrency", params.get("currency", "USD"))
+            value_unit = target + ("/shares" if unit.endswith("/shares") else "")
         reasons = []
         if undated:
             reasons.append("undated_reconstruction")
@@ -85,7 +91,9 @@ def normalize_period(period, envelope, cik=None):
             reasons.append("invalid_period_or_source_before_period_end")
         if len(units) > 1:
             reasons.append("changing_units")
-        if fx:
+        if native_passthrough and native_currency and unit and value_unit != unit:
+            reasons.append("native_currency_unit_conflict")
+        if fx and not native_passthrough:
             # A snapshot FX conversion does not prove historical conversion inputs.
             reasons.append("currency_conversion_or_native_fx")
         if not unit:
@@ -97,7 +105,7 @@ def normalize_period(period, envelope, cik=None):
             "source": "stockfit", "statement": envelope["endpoint"].split("/")[-1],
             "period_kind": params["period"], "period_end": period["period"],
             "fiscal_year": period.get("fiscalYear"), "fiscal_period": period.get("fiscalPeriod"),
-            "metric": metric, "unit": native.get(metric, unit),
+            "metric": metric, "unit": unit,
             "value_unit": value_unit,
             "period_filed_at": iso(period_time), "retrieved_at": iso(retrieved),
             "has_revisions": any("before" in e[3] for e in events),

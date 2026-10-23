@@ -90,6 +90,36 @@ are retained for snapshot use and are not backdated into historical features.
 See [StockFit methodology and usage](docs/STOCKFIT.md) and the
 [2026-10-23 assessment](docs/STOCKFIT_ASSESSMENT_2026-10-23.md).
 
+## Full-universe StockFit dataset
+
+The standalone expansion removes the old S&P membership and research-date caps.
+It discovers active and delisted stock issuers, deduplicates by SEC CIK, and
+requests the maximum available annual and quarterly statement history. It keeps
+all numeric statement fields, not just the original panel's 31 selected metrics.
+
+```bash
+python scripts/expand_stockfit.py --snapshot data/stockfit/expanded-2026-10-23
+
+python scripts/build_stockfit_universe.py \
+  --snapshot data/stockfit/expanded-2026-10-23 \
+  --out-dir data/stockfit/universe-2026-10-23
+
+python scripts/query_stockfit.py \
+  --dataset data/stockfit/universe-2026-10-23 \
+  --as-of 2012-06-01 --ciks 320193 789019 --filing-only \
+  --out-dir outputs/stockfit-2012-06-01
+```
+
+The `events/` dataset is a compact, all-metric PIT feature history. The query
+materializes values at an explicit decision time, with units, fiscal dates and
+filing provenance. Native currencies are preserved; do not sum different
+currencies. A date alone means 00:00 UTC. Historical prices and index membership
+are not inferred from today's company list.
+
+Downloads and issuer builds resume from completed partitions. The original
+dataset remains unchanged. See [expanded dataset usage](docs/STOCKFIT_UNIVERSE.md)
+for scope, full-history queries, limits, and validation.
+
 ## Repository structure
 
 ```text
