@@ -1,0 +1,47 @@
+{
+  "AET": {
+    "cik": 1122304,
+    "period_end_through": "2018-11-29",
+    "evidence": "Aetna issuer and CIK verified at https://www.sec.gov/Archives/edgar/data/1122304/000112230412000143/aet0930201210-q.htm and StockFit issuer-name search. Boundary is the saved membership end."
+  },
+  "ANDV": {
+    "cik": 50104,
+    "period_end_through": "2018-10-01",
+    "evidence": "ANDV and issuer CIK verified at https://www.sec.gov/Archives/edgar/data/50104/000151029518000133/mpc425aug32018.htm. Boundary is the saved membership end."
+  },
+  "LLTC": {
+    "cik": 791907,
+    "period_end_through": "2017-03-13",
+    "evidence": "LLTC and issuer CIK verified at https://www.sec.gov/Archives/edgar/data/791907/000079190716000212/lltc-20161018xex99_1.htm. Boundary is the saved membership end."
+  },
+  "LVLT": {
+    "cik": 794323,
+    "period_end_through": "2017-10-13",
+    "evidence": "LVLT and issuer CIK verified at https://www.sec.gov/Archives/edgar/data/794323/000079432313000003/lvlt-123112_10k.htm. Boundary is the saved membership end; excludes later subsidiary-only reporting."
+  },
+  "DWDP": {
+    "cik": 1666700,
+    "period_end_through": "2019-06-03",
+    "evidence": "DWDP and issuer CIK verified at https://www.sec.gov/Archives/edgar/data/1666700/000166670018000009/a2017dwdp10-k.htm. Boundary is the saved membership end; excludes subsequent standalone DuPont periods."
+  },
+  "SCG": {
+    "cik": 754737,
+    "period_end_through": "2019-01-02",
+    "evidence": "SCG and issuer CIK verified at https://www.sec.gov/Archives/edgar/data/754737/000075473718000111/q417pressreleasefinal.htm. Boundary is the saved membership end."
+  },
+  "STJ": {
+    "cik": 203077,
+    "period_end_through": "2017-01-05",
+    "evidence": "STJ and issuer CIK verified at https://www.sec.gov/Archives/edgar/data/203077/000104746910009909/a2201128z424b3.htm. Boundary is the saved membership end."
+  },
+  "WFM": {
+    "cik": 865436,
+    "period_end_through": "2017-08-28",
+    "evidence": "WFM and issuer CIK verified at https://www.sec.gov/Archives/edgar/data/865436/000086543617000238/wfm10k2017.htm. Boundary is the saved membership end."
+  },
+  "XOM": {
+    "cik": 34088,
+    "period_end_through": "2026-08-03",
+    "evidence": "StockFit lookup/cik?cik=34088 identifies EXXON MOBIL CORP and priorTickers XOM, lastSeen 2026-08-03. Current XOM resolves to ExxonMobil Holdings Corp, CIK 2115436. Verified 2026-10-23."
+  }
+}

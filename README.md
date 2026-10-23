@@ -18,6 +18,7 @@ This repo packages a practical pipeline around:
 - DoltHub `post-no-preference/earnings`
 - DoltHub `post-no-preference/stocks`
 - optional Defeat Beta ratios for extra market and fundamental features
+- optional StockFit statements with per-fact filing and revision provenance
 
 ## What the pipeline does
 
@@ -29,10 +30,9 @@ This repo packages a practical pipeline around:
 
 ## Point-in-time logic
 
-The key idea in this repo is simple:
-
-- use direct event timing when a trustworthy date is available
-- otherwise use conservative lag assumptions
+There are two separate fundamentals paths: the original lag-based DoltHub panel
+and a StockFit reference layer with filing versions. The original builder does
+not use the earnings calendar to establish statement availability.
 
 For the open DoltHub statements, true filing timestamps are not available in the source tables used here. So the safer panel assumes:
 
@@ -41,7 +41,54 @@ For the open DoltHub statements, true filing timestamps are not available in the
 - EPS history is delayed by the quarter lag
 - estimate rows are kept only while their target period end is still in the future
 
-That gives you something much safer than treating fiscal period dates as if they were publication dates.
+These are assumptions, not a point-in-time guarantee. Late filings can exceed
+the lags, and a lag cannot remove revisions from a latest-value source. The
+original panel also mixes quarterly and annual statement features. For validated
+filing timing and separate frequencies, use the StockFit extension below.
+
+## StockFit assessment and extension
+
+The StockFit path compares existing fundamentals, downloads all available numeric
+statement fields, and builds a separate versioned dataset. It preserves the raw
+DoltHub tables. It requires an API key in `STOCKFIT_API_KEY`; do not put keys in
+source files or commit downloaded data.
+
+```bash
+# Set STOCKFIT_API_KEY in your shell or secret manager first.
+python scripts/fetch_stockfit.py \
+  --snapshot data/stockfit/2026-10-23
+
+# Recover the documented historical issuer mappings.
+python scripts/fetch_stockfit.py \
+  --snapshot data/stockfit/2026-10-23-identities \
+  --symbols AET ANDV DWDP LLTC LVLT SCG STJ WFM XOM \
+  --cik-map config/stockfit_cik_overrides.json
+
+python scripts/assess_stockfit.py \
+  --snapshot data/stockfit/2026-10-23 \
+  --identity-snapshot data/stockfit/2026-10-23-identities \
+  --out-dir data/stockfit/assessment-2026-10-23
+
+python scripts/report_stockfit.py \
+  --assessment data/stockfit/assessment-2026-10-23
+```
+
+Check every stored panel feature and filing version with
+`python scripts/validate_stockfit.py --assessment data/stockfit/assessment-2026-10-23`.
+Rerun the report command afterward to include these validation results.
+
+Use a new snapshot directory for a refresh and a new assessment directory for
+each build. Downloads resume from cached successes. Historical depth is limited
+by the provider, plan and the endpoint's maximum of 80 periods per request.
+
+Outputs include all normalized facts, filing versions, cell-level comparisons,
+coverage gaps, a fundamentals-only panel and a generated `REPORT.md`. The panel
+uses the existing research dates and membership intervals; the filing dataset
+can extend beyond them. Calculated values without sufficient dated provenance
+are retained for snapshot use and are not backdated into historical features.
+
+See [StockFit methodology and usage](docs/STOCKFIT.md) and the
+[2026-10-23 assessment](docs/STOCKFIT_ASSESSMENT_2026-10-23.md).
 
 ## Repository structure
 
@@ -133,7 +180,7 @@ This writes:
 - historical S&P 500 membership intervals
 - local Parquet copies of the source tables
 - `fundamentals_estimates_panel.parquet`
-- `aligned_sp500_daily_panel.parquet`
+- `aligned_sp500_daily_panel.parquet` when the builder also downloads prices
 - `manifest.json`
 
 ### 2. Add market data and optional Defeat Beta features
@@ -189,7 +236,7 @@ The most important outputs are:
 - `data/dolthub_sp500/fundamentals_estimates_prices_panel.parquet`
   Broad aligned panel for exploration and feature work.
 - `data/dolthub_sp500/fundamentals_estimates_prices_panel_pit.parquet`
-  Safer panel for modeling and backtests.
+  Legacy lag-based panel. Availability and original filing vintages are unverified.
 - `data/dolthub_sp500/manifest.json`
   Build metadata for the base dataset.
 - `data/dolthub_sp500/price_enrichment_manifest.json`
